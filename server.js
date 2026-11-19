@@ -531,24 +531,34 @@ async function streamHandler(args, cb) {
         return resB - resA;
       });
 
-         for (const playlist of sortedPlaylists) {
-        const streamUrl = playlist.uri.startsWith('http')
-          ? playlist.uri
-          : new URL(playlist.uri, hlsUrl).href;
+      for (const playlist of sortedPlaylists) {
+        // Resolve relative HLS variant URLs against the master playlist URL.
+        let streamUrl;
+        try {
+          streamUrl = new URL(playlist.uri, hlsUrl).href;
+        } catch (urlError) {
+          debugLog(serverConfig.debug, 'Skipping invalid HLS variant URL:', playlist.uri);
+          continue;
+        }
+
+        const resolution = playlist.attributes?.RESOLUTION;
+        const height = resolution?.height;
+        const bandwidth = playlist.attributes?.BANDWIDTH;
 
         streams.push({
           name: 'TV2 Play',
-          title: playlist.attributes?.RESOLUTION
-            ? `${playlist.attributes.RESOLUTION.width}x${playlist.attributes.RESOLUTION.height}`
-            : 'Unknown',
+          title: [
+            resolution ? `${resolution.width}x${resolution.height}` : null,
+            bandwidth ? `${Math.round(bandwidth / 1000)} kbps` : null
+          ].filter(Boolean).join(' • ') || 'HLS',
           url: streamUrl,
+          // Stremio-compatible stream hints. Keep Referer as a flat header map.
           behaviorHints: {
-            bingeGroup: id,
+            bingeGroup: `tv2play-${id}`,
             notWebReady: false,
             proxyHeaders: {
-              request: {
-                Referer: baseUrl
-              }
+              Referer: baseUrl,
+              'User-Agent': headers['User-Agent']
             }
           }
         });
