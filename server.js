@@ -531,15 +531,24 @@ async function streamHandler(args, cb) {
         return resB - resA;
       });
 
-      for (const playlist of sortedPlaylists) {
-        const streamUrl = playlist.uri.startsWith('http') ? playlist.uri : new URL(playlist.uri, hlsUrl).href;
+         for (const playlist of sortedPlaylists) {
+        const streamUrl = playlist.uri.startsWith('http')
+          ? playlist.uri
+          : new URL(playlist.uri, hlsUrl).href;
+
         streams.push({
+          name: 'TV2 Play',
+          title: playlist.attributes?.RESOLUTION
+            ? `${playlist.attributes.RESOLUTION.width}x${playlist.attributes.RESOLUTION.height}`
+            : 'Unknown',
           url: streamUrl,
-          title: playlist.attributes?.RESOLUTION ? `${playlist.attributes.RESOLUTION.width}x${playlist.attributes.RESOLUTION.height}` : 'Unknown',
           behaviorHints: {
             bingeGroup: id,
+            notWebReady: false,
             proxyHeaders: {
-              'Referer': baseUrl
+              request: {
+                Referer: baseUrl
+              }
             }
           }
         });
