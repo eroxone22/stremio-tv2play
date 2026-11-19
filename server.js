@@ -460,6 +460,7 @@ async function metaHandler(args, cb) {
 // Stream handler
 async function streamHandler(args, cb) {
   const { type, id } = args;
+  console.log(`[STREAM] request type=${type} id=${id}`);
   debugLog(serverConfig.debug, `Stream request: ${type}, ${id}`);
 
   // Check if the ID belongs to this addon
@@ -475,14 +476,17 @@ async function streamHandler(args, cb) {
 
     const data = await makeRequest(searchUrl);
     if (!data) {
+      console.warn(`[STREAM] no TV2 item found for id=${id}`);
       debugLog(serverConfig.debug, 'No data found for stream');
       return cb(new Error('Item not found'));
     }
 
     const isPremium = data.isPremium === 'true';
     const playerId = data.playerId || data.coverVideoPlayerId;
+    console.log(`[STREAM] TV2 item found; playerId=${Boolean(playerId)} premium=${isPremium}`);
     debugLog(serverConfig.debug, `Player ID: ${playerId}`);
     if (!playerId) {
+      console.warn(`[STREAM] missing playerId for id=${id}`);
       debugLog(serverConfig.debug, 'No player ID found');
       return cb(null, { streams: [] });
     }
@@ -493,6 +497,7 @@ async function streamHandler(args, cb) {
     const streamData = await makeRequest(streamUrl);
 
     if (!streamData || streamData.geoBlocked) {
+      console.warn(`[STREAM] streaming URL unavailable; response=${Boolean(streamData)} geoBlocked=${Boolean(streamData?.geoBlocked)}`);
       debugLog(serverConfig.debug, 'Stream not available or geo-blocked');
       return cb(null, { streams: [] });
     }
@@ -507,6 +512,7 @@ async function streamHandler(args, cb) {
 
     const hlsPath = m3u8Json.bitrates?.hls;
     if (!hlsPath) {
+      console.warn(`[STREAM] TV2 response has no HLS path for id=${id}`);
       debugLog(serverConfig.debug, 'No HLS path found in M3U8 JSON');
       return cb(null, { streams: [] });
     }
@@ -515,11 +521,13 @@ async function streamHandler(args, cb) {
     debugLog(serverConfig.debug, `HLS URL: ${hlsUrl}`);
     const m3u8Content = await makeRequest(hlsUrl);
     if (!m3u8Content) {
+      console.warn(`[STREAM] failed to fetch master playlist for id=${id}`);
       debugLog(serverConfig.debug, 'Failed to fetch M3U8 content');
       return cb(null, { streams: [] });
     }
 
     const manifest = parseM3U8(m3u8Content);
+    console.log(`[STREAM] HLS master parsed; variants=${manifest.playlists?.length || 0}`);
     debugLog(serverConfig.debug, `M3U8 parsed, found ${manifest.playlists?.length || 0} playlists`);
     const streams = [];
 
@@ -566,10 +574,11 @@ async function streamHandler(args, cb) {
       }
     }
 
+    console.log(`[STREAM] returning ${streams.length} quality options for id=${id}`);
     debugLog(serverConfig.debug, `Stream result: ${streams.length} quality options`);
     cb(null, { streams });
   } catch (error) {
-    console.error('[DEBUG] Stream error:', error);
+    console.error(`[STREAM] error type=${type} id=${id}:`, error.message);
     cb(null, { streams: [] });
   }
 }
