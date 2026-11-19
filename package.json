@@ -11,7 +11,8 @@
     "express": "^4.18.0",
     "axios": "^1.6.0",
     "m3u8-parser": "^4.8.0",
-    "socks-proxy-agent": "latest"
+    "socks-proxy-agent": "latest",
+    "fuse.js": "^7.1.0"
   },
   "engines": {
     "node": ">=14.0.0"
