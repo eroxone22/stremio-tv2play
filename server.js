@@ -542,23 +542,24 @@ async function streamHandler(args, cb) {
         }
 
         const resolution = playlist.attributes?.RESOLUTION;
-        const height = resolution?.height;
         const bandwidth = playlist.attributes?.BANDWIDTH;
 
         streams.push({
           name: 'TV2 Play',
-          title: [
-            resolution ? `${resolution.width}x${resolution.height}` : null,
-            bandwidth ? `${Math.round(bandwidth / 1000)} kbps` : null
-          ].filter(Boolean).join(' • ') || 'HLS',
+          title: resolution
+            ? `${resolution.width}x${resolution.height}`
+            : (bandwidth ? `${Math.round(bandwidth / 1000)} kbps` : 'HLS'),
           url: streamUrl,
-          // Stremio-compatible stream hints. Keep Referer as a flat header map.
+          type: 'hls',
           behaviorHints: {
             bingeGroup: `tv2play-${id}`,
-            notWebReady: false,
+            // Required by the Stremio stream contract when proxyHeaders are supplied.
+            notWebReady: true,
             proxyHeaders: {
-              Referer: baseUrl,
-              'User-Agent': headers['User-Agent']
+              request: {
+                Referer: baseUrl,
+                'User-Agent': headers['User-Agent']
+              }
             }
           }
         });
